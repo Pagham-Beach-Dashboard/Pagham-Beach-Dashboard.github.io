@@ -170,6 +170,142 @@ function updateHourlyWeather(hourly) {
   updateRainChance(maximum)
 }
 
+function normaliseDegrees(degrees) {
+  return ((Number(degrees) % 360) + 360) % 360
+}
+
+function angleDifference(a, b) {
+  return Math.abs(((normaliseDegrees(a) - normaliseDegrees(b) + 540) % 360) - 180)
+}
+
+function getPaghamShoreWind(direction) {
+  if (!Number.isFinite(direction)) {
+    return {
+      label: "Unavailable",
+      category: "unknown",
+      status: "warning",
+      description: "Wind direction unavailable"
+    }
+  }
+
+  // Pagham East Beach faces approximately south-southeast.
+  // Weather direction is where the wind comes FROM.
+  const difference = angleDifference(direction, 157.5)
+
+  if (difference <= 30) {
+    return {
+      label: "Onshore",
+      category: "onshore",
+      status: "good",
+      description: "Blowing towards the beach"
+    }
+  }
+
+  if (difference <= 65) {
+    return {
+      label: "Cross-onshore",
+      category: "cross-onshore",
+      status: "good",
+      description: "Blowing diagonally towards the beach"
+    }
+  }
+
+  if (difference <= 115) {
+    return {
+      label: "Cross-shore",
+      category: "cross-shore",
+      status: "warning",
+      description: "Blowing mostly along the beach"
+    }
+  }
+
+  if (difference <= 150) {
+    return {
+      label: "Cross-offshore",
+      category: "cross-offshore",
+      status: "warning",
+      description: "Blowing diagonally out to sea"
+    }
+  }
+
+  return {
+    label: "Offshore",
+    category: "offshore",
+    status: "danger",
+    description: "Blowing out to sea"
+  }
+}
+
+function assessWindsurfConditions(wind, gusts, direction) {
+  const speed = Number(wind)
+  const gustSpeed = Number.isFinite(Number(gusts)) ? Number(gusts) : speed
+  const gustGap = Math.max(0, gustSpeed - speed)
+  const shoreWind = getPaghamShoreWind(Number(direction))
+
+  if (!Number.isFinite(speed)) {
+    return {
+      level: "Unavailable",
+      status: "danger",
+      reason: "Wind data could not be loaded.",
+      beginnerFriendly: false,
+      shoreWind,
+      gustGap
+    }
+  }
+
+  let level
+  let status
+  let reason
+
+  if (speed < 6) {
+    level = "No wind"
+    status = "good"
+    reason = "Too little wind for normal windsurfing, although it may suit basic sail handling close to shore."
+  } else if (speed < 12 && gustGap <= 5) {
+    level = "Beginner winds"
+    status = "good"
+    reason = "Suitable for beginner practice with supervision."
+  } else if (speed < 20 && gustGap <= 8) {
+    level = "Intermediate winds"
+    status = "intermediate"
+    reason = "More demanding conditions requiring confident turning, uphauling and sail control."
+  } else {
+    level = "Advanced winds"
+    status = "advanced"
+    reason = "Strong or very gusty conditions suited to experienced windsurfers with appropriate equipment."
+  }
+
+  if (shoreWind.category === "cross-offshore") {
+    if (level === "Beginner winds" || level === "No wind") {
+      level = "Intermediate winds"
+      status = "intermediate"
+    }
+    reason = "Cross-offshore wind can make returning to the beach more difficult."
+  }
+
+  if (shoreWind.category === "offshore") {
+    level = "Advanced winds"
+    status = "danger"
+    reason = "Offshore wind can carry you away from the beach and is unsuitable for learners."
+  }
+
+  const beginnerFriendly =
+    speed >= 6 &&
+    speed < 12 &&
+    gustGap <= 5 &&
+    shoreWind.category !== "offshore" &&
+    shoreWind.category !== "cross-offshore"
+
+  return {
+    level,
+    status,
+    reason,
+    beginnerFriendly,
+    shoreWind,
+    gustGap
+  }
+}
+
 function updateBestWindsurfWindow(forecast) {
   const timeElement = document.getElementById("best-windsurf-time")
   const detailElement = document.getElementById("best-windsurf-detail")
@@ -184,17 +320,21 @@ function updateBestWindsurfWindow(forecast) {
     return
   }
 
+  const assessed = forecast.map(item => ({
+    ...item,
+    assessment: assessWindsurfConditions(item.wind, item.gusts, item.direction)
+  }))
+
   const runs = []
   let activeRun = []
 
-  for (const item of forecast) {
-    if (isBeginnerFriendlyWind(item.wind, item.gusts, item.direction)) {
+  for (const item of assessed) {
+    if (item.assessment.beginnerFriendly) {
       activeRun.push(item)
-      continue
+    } else {
+      if (activeRun.length) runs.push(activeRun)
+      activeRun = []
     }
-
-    if (activeRun.length) runs.push(activeRun)
-    activeRun = []
   }
 
   if (activeRun.length) runs.push(activeRun)
@@ -210,10 +350,13 @@ function updateBestWindsurfWindow(forecast) {
     const start = best[0].time
     const end = new Date(best[best.length - 1].time.getTime() + 60 * 60 * 1000)
     const winds = best.map(item => item.wind)
-    const maxGust = Math.max(...best.map(item => Number.isFinite(item.gusts) ? item.gusts : item.wind))
+    const maxGust = Math.max(...best.map(item =>
+      Number.isFinite(item.gusts) ? item.gusts : item.wind
+    ))
 
     timeElement.textContent = `${formatHour(start)}–${formatHour(end)}`
-    detailElement.textContent = `Steady ${Math.round(Math.min(...winds))}–${Math.round(Math.max(...winds))} kt wind, gusts to ${Math.round(maxGust)} kt`
+    detailElement.textContent =
+      `${Math.round(Math.min(...winds))}–${Math.round(Math.max(...winds))} kt, gusts to ${Math.round(maxGust)} kt`
     insight.classList.add("good")
     return
   }
@@ -221,25 +364,14 @@ function updateBestWindsurfWindow(forecast) {
   if (best && best.length === 1) {
     const item = best[0]
     timeElement.textContent = `Around ${formatHour(item.time)}`
-    detailElement.textContent = `Only a short beginner window at about ${Math.round(item.wind)} kt`
+    detailElement.textContent = `A short beginner window at about ${Math.round(item.wind)} kt`
     insight.classList.add("warning")
     return
   }
 
-  timeElement.textContent = "No safe beginner window"
-  detailElement.textContent = diagnoseNoBeginnerWindow(forecast)
-  insight.classList.add("danger")
-}
-
-function isBeginnerFriendlyWind(wind, gusts, direction) {
-  const gustGap = Number.isFinite(gusts) ? gusts - wind : 0
-
-  if (Number.isFinite(direction)) {
-    const shoreWind = classifyPaghamShoreWind(degreesToCompass(direction))
-    if (shoreWind.category === "offshore") return false
-  }
-
-  return wind >= 7 && wind < 13 && gustGap <= 6
+  timeElement.textContent = "No beginner window"
+  detailElement.textContent = diagnoseNoBeginnerWindow(assessed)
+  insight.classList.add("warning")
 }
 
 function averageGustGap(items) {
@@ -254,23 +386,25 @@ function averageGustGap(items) {
 
 function diagnoseNoBeginnerWindow(forecast) {
   const winds = forecast.map(item => item.wind).filter(Number.isFinite)
-  const gustGaps = forecast
-    .map(item => Number.isFinite(item.gusts) ? item.gusts - item.wind : null)
-    .filter(Number.isFinite)
-  const offshoreCount = forecast.filter(item => {
-    if (!Number.isFinite(item.direction)) return false
-    return classifyPaghamShoreWind(degreesToCompass(item.direction)).category === "offshore"
-  }).length
+  const assessments = forecast.map(item =>
+    item.assessment || assessWindsurfConditions(item.wind, item.gusts, item.direction)
+  )
 
-  const maxWind = Math.max(...winds)
-  const minWind = Math.min(...winds)
-  const maxGustGap = gustGaps.length ? Math.max(...gustGaps) : 0
-
-  if (offshoreCount === forecast.length) return "Wind stays offshore at Pagham"
-  if (offshoreCount > 0) return "Some otherwise useful wind is offshore, so check direction carefully"
-  if (maxWind < 7) return "Wind stays below the learning range"
-  if (minWind >= 13) return "Wind stays above the beginner range"
-  if (maxGustGap > 6) return "Gusts are too punchy for steady practice"
+  if (!winds.length) return "Wind forecast unavailable"
+  if (assessments.every(item => item.shoreWind.category === "offshore")) {
+    return "Wind stays offshore at Pagham"
+  }
+  if (assessments.some(item => item.shoreWind.category === "offshore")) {
+    return "Some forecast periods are offshore"
+  }
+  if (assessments.some(item => item.shoreWind.category === "cross-offshore")) {
+    return "Wind is cross-offshore for part of the forecast"
+  }
+  if (Math.max(...winds) < 6) return "No usable wind forecast"
+  if (Math.min(...winds) >= 12) return "Wind stays above the beginner range"
+  if (Math.max(...assessments.map(item => item.gustGap)) > 5) {
+    return "Gusts stay too strong for steady beginner practice"
+  }
   return "Conditions move in and out of the beginner range"
 }
 
@@ -340,7 +474,7 @@ async function loadMarineAndTides() {
     "https://marine-api.open-meteo.com/v1/marine" +
     `?latitude=${PAGHAM.latitude}` +
     `&longitude=${PAGHAM.longitude}` +
-    "&current=sea_surface_temperature,sea_level_height_msl" +
+    "&current=sea_surface_temperature,sea_level_height_msl,wave_height,wave_direction,wave_period,wind_wave_height,wind_wave_period,swell_wave_height" +
     "&minutely_15=sea_level_height_msl" +
     "&forecast_days=3" +
     `&timezone=${encodeURIComponent(PAGHAM.timezone)}`
@@ -352,6 +486,15 @@ async function loadMarineAndTides() {
     ? `${Math.round(seaTemperature)}°C`
     : "Unavailable"
 
+  updateMarineSafety({
+    waveHeight: Number(data.current?.wave_height),
+    waveDirection: Number(data.current?.wave_direction),
+    wavePeriod: Number(data.current?.wave_period),
+    windWaveHeight: Number(data.current?.wind_wave_height),
+    windWavePeriod: Number(data.current?.wind_wave_period),
+    swellWaveHeight: Number(data.current?.swell_wave_height)
+  })
+
   const times = data.minutely_15?.time ?? []
   const heights = data.minutely_15?.sea_level_height_msl ?? []
 
@@ -360,6 +503,56 @@ async function loadMarineAndTides() {
   }
 
   updateTideDisplay(times, heights)
+}
+
+function getSeaState(waveHeight) {
+  if (!Number.isFinite(waveHeight)) return "Unavailable"
+  if (waveHeight < 0.5) return "Smooth"
+  if (waveHeight < 1.25) return "Slight"
+  if (waveHeight < 2.5) return "Moderate"
+  if (waveHeight < 4) return "Rough"
+  return "Very rough"
+}
+
+function getChopLevel({ waveHeight, wavePeriod, windWaveHeight, windWavePeriod }) {
+  if (!Number.isFinite(waveHeight) || waveHeight <= 0) return "Unavailable"
+
+  const windWaveShare = Number.isFinite(windWaveHeight)
+    ? Math.max(0, Math.min(1, windWaveHeight / waveHeight))
+    : null
+
+  const effectivePeriod = Number.isFinite(windWavePeriod)
+    ? windWavePeriod
+    : wavePeriod
+
+  if (
+    (windWaveShare !== null && windWaveShare >= 0.65 && effectivePeriod < 5) ||
+    (effectivePeriod < 4 && waveHeight >= 0.4)
+  ) return "Choppy"
+
+  if (
+    (windWaveShare !== null && windWaveShare >= 0.4) ||
+    effectivePeriod < 6
+  ) return "Some chop"
+
+  return "Cleaner waves"
+}
+
+function updateMarineSafety(values) {
+  const waveHeight = document.getElementById("wave-height")
+  const seaState = document.getElementById("sea-state")
+  const chop = document.getElementById("chop-level")
+  const period = document.getElementById("wave-period")
+
+  waveHeight.textContent = Number.isFinite(values.waveHeight)
+    ? `${values.waveHeight.toFixed(1)} m`
+    : "-- m"
+
+  seaState.textContent = getSeaState(values.waveHeight)
+  chop.textContent = getChopLevel(values)
+  period.textContent = Number.isFinite(values.wavePeriod)
+    ? `${Math.round(values.wavePeriod)} s`
+    : "-- s"
 }
 
 function updateTideDisplay(times, heights) {
@@ -392,6 +585,25 @@ function updateTideDisplay(times, heights) {
   document.getElementById("next-high-tide").textContent = nextHigh ? formatTideTime(nextHigh.time) : "--:--"
   document.getElementById("next-low-tide").textContent = nextLow ? formatTideTime(nextLow.time) : "--:--"
   document.querySelector(".tide-card").classList.toggle("rising", isRising)
+
+  const nextTurn = isRising ? nextHigh : nextLow
+  const safetyNote = document.getElementById("tide-safety-note")
+  if (safetyNote) {
+    if (nextTurn) {
+      const minutes = Math.max(0, Math.round((nextTurn.time - now) / 60000))
+      const hoursPart = Math.floor(minutes / 60)
+      const minutesPart = minutes % 60
+      const timeText = hoursPart
+        ? `${hoursPart} hr ${minutesPart} min`
+        : `${minutesPart} min`
+
+      safetyNote.textContent = isRising
+        ? `Tide is rising, with high water in about ${timeText}. Allow for a shrinking beach and changing water movement.`
+        : `Tide is falling, with low water in about ${timeText}. Allow for increasing distance from the beach and changing water movement.`
+    } else {
+      safetyNote.textContent = `Tide is ${isRising ? "rising" : "falling"}. Check local water movement before launching.`
+    }
+  }
 }
 
 function findNearestFutureIndex(points, now) {
@@ -650,49 +862,13 @@ function showPollutionUnavailable() {
   if (updated) updated.textContent = ""
 }
 function updateWindsurfLevel(wind, gusts, direction) {
-  const gustDifference = Number.isFinite(gusts) ? gusts - wind : 0
+  const assessment = assessWindsurfConditions(wind, gusts, direction)
   const compassDirection = degreesToCompass(direction)
-  const shoreWind = classifyPaghamShoreWind(compassDirection)
-
-  let level = "High risk"
-  let reason = "Conditions are outside the safer learning range. Check local conditions before going out."
-  let status = "danger"
-
-  if (shoreWind.category === "offshore") {
-    level = "High risk"
-    reason = "Wind is offshore at Pagham, so it can push you away from the beach even if the wind strength looks manageable."
-    status = "danger"
-  } else if (wind >= 7 && wind < 13 && gustDifference <= 6) {
-    level = "Good beginner"
-    reason = "Wind is in the beginner range and gusts are manageable, so it should be suitable for supervised practice."
-    status = "good"
-  } else if (wind >= 13 && wind < 20 && gustDifference <= 8) {
-    level = "Intermediate"
-    reason = "Wind is above the beginner range, so uphauling, turning and sail control will need more confidence."
-    status = "intermediate"
-  } else if (wind >= 20 && wind <= 28 && gustDifference <= 10) {
-    level = "Advanced"
-    reason = "Strong wind suited to experienced windsurfers with suitable kit and confident control."
-    status = "advanced"
-  } else if (wind < 7) {
-    level = "High risk"
-    reason = "Wind is below the beginner range, so you may struggle to move or sail back reliably."
-    status = "danger"
-  } else if (gustDifference > 8) {
-    level = "High risk"
-    reason = "Average wind may look manageable, however gusts are much stronger and may pull the sail suddenly."
-    status = "danger"
-  } else if (wind > 28) {
-    level = "High risk"
-    reason = "Wind strength is above a sensible range for casual windsurfing."
-    status = "danger"
-  }
-
   const levelElement = document.getElementById("windsurf-level")
   const dot = document.getElementById("condition-dot")
 
-  levelElement.textContent = level
-  document.getElementById("windsurf-reason").textContent = reason
+  levelElement.textContent = assessment.level
+  document.getElementById("windsurf-reason").textContent = assessment.reason
   document.getElementById("wind-speed").textContent = `${Math.round(wind)} kt`
   document.getElementById("wind-gusts").textContent = `${Math.round(gusts)} kt`
   document.getElementById("wind-direction").textContent = compassDirection
@@ -704,9 +880,10 @@ function updateWindsurfLevel(wind, gusts, direction) {
     danger: "#bd2c24"
   }
 
-  levelElement.style.color = colours[status]
-  dot.style.background = colours[status]
+  levelElement.style.color = colours[assessment.status]
+  dot.style.background = colours[assessment.status]
   dot.classList.add("active")
+
   updateBeginnerRangeGuide(wind)
   updateGustWarning(wind, gusts)
   updateShoreWindGuide(direction)
@@ -784,67 +961,28 @@ function updateShoreWindGuide(direction) {
   }
 
   const compass = degreesToCompass(direction)
-  const guide = classifyPaghamShoreWind(compass)
+  const guide = getPaghamShoreWind(direction)
 
   type.textContent = `${guide.label} · ${compass}`
-  arrow.style.transform = `translate(0,-50%) rotate(${direction - 90}deg)`
+  arrow.setAttribute("title", guide.description)
+
+  // Open-Meteo gives the direction the wind comes from.
+  // Add 180 degrees so the arrow shows where it is blowing towards.
+  arrow.style.transform = `translate(0,-50%) rotate(${normaliseDegrees(direction + 90)}deg)`
   insight.classList.add(guide.status)
 }
 
-function classifyPaghamShoreWind(compass) {
-  const guide = {
-    N: {
-      label: "Onshore",
-      category: "onshore",
-      status: "good"
-    },
-    NE: {
-      label: "Onshore",
-      category: "onshore",
-      status: "good"
-    },
-    E: {
-      label: "Cross-shore",
-      category: "cross",
-      status: "warning"
-    },
-    SE: {
-      label: "Offshore risk",
-      category: "offshore",
-      status: "danger"
-    },
-    S: {
-      label: "Offshore risk",
-      category: "offshore",
-      status: "danger"
-    },
-    SW: {
-      label: "Offshore risk",
-      category: "offshore",
-      status: "danger"
-    },
-    W: {
-      label: "Cross-shore",
-      category: "cross",
-      status: "warning"
-    },
-    NW: {
-      label: "Onshore",
-      category: "onshore",
-      status: "good"
-    }
-  }
-
-  return guide[compass] || {
-    label: "Check direction",
-    category: "unknown",
-    status: "warning"
-  }
-}
-
 function degreesToCompass(degrees) {
-  const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-  return directions[Math.round(degrees / 45) % 8]
+  if (!Number.isFinite(Number(degrees))) return "--"
+
+  const directions = [
+    "N", "NNE", "NE", "ENE",
+    "E", "ESE", "SE", "SSE",
+    "S", "SSW", "SW", "WSW",
+    "W", "WNW", "NW", "NNW"
+  ]
+
+  return directions[Math.round(normaliseDegrees(degrees) / 22.5) % 16]
 }
 
 function updateSunset(value) {
