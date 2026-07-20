@@ -32,6 +32,16 @@ body{
   transition:background-image .7s ease;
 }
 
+.mobile-hero{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:0;
+  z-index:10;
+  pointer-events:none;
+}
+
 .dashboard{
   position:relative;
   width:min(1600px,100%);
@@ -1026,7 +1036,7 @@ footer{
   border-radius:20px;
   background:var(--paper);
   box-shadow:var(--shadow);
-  backdrop-filter:blur(px);
+  backdrop-filter:blur(9px);
 }
 
 .forecast-heading .card-heading{
@@ -1424,18 +1434,68 @@ footer{
   }
 }
 
-@media (max-width:900px){
+
+/* Mobile opening artwork followed by independently scrolling widgets */
+@media(max-width:900px){
+  html,
   body{
-    background-size:100% auto;
+    min-height:100%;
+  }
+
+  body{
+    background-image:none !important;
+    background-attachment:scroll;
+    background-color:var(--mobile-page-colour,#18a5cf);
+  }
+
+  body.morning-theme{
+    --mobile-page-colour:#77c5d3;
+  }
+
+  body.day-theme{
+    --mobile-page-colour:#18a5cf;
+  }
+
+  body.sunset-theme{
+    --mobile-page-colour:#c97872;
+  }
+
+  body.night-theme{
+    --mobile-page-colour:#102f4d;
+  }
+
+  .mobile-hero{
+    position:relative;
+    width:100%;
+    height:100svh;
+    min-height:560px;
+    z-index:1;
+    overflow:hidden;
+    background-size:cover;
     background-position:top center;
     background-repeat:no-repeat;
-    background-color:#159fd0;
+    background-color:var(--mobile-page-colour);
+    pointer-events:auto;
+    transition:background-image .7s ease,background-color .7s ease;
   }
-}
 
-@media (max-width:900px){
-  .updated-panel{
+  .mobile-hero .updated-panel{
     top:38px;
     right:22px;
+  }
+
+  .dashboard{
+    position:relative;
+    z-index:2;
+    width:100%;
+    min-height:0;
+    margin:0;
+    padding:20px 16px 30px;
+    background:var(--mobile-page-colour);
+    transition:background-color .7s ease;
+  }
+
+  .view-current .cards{
+    margin-top:0;
   }
 }
