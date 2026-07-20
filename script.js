@@ -15,24 +15,40 @@ function usesMobileBackground() {
   return window.matchMedia("(max-width: 900px)").matches
 }
 
+function setTimeOfDayTheme(name) {
+  document.body.classList.remove(
+    "morning-theme",
+    "day-theme",
+    "sunset-theme",
+    "night-theme"
+  )
+  document.body.classList.add(`${name}-theme`)
+}
+
 function updateBackground() {
   const name = getBackgroundNameForHour(new Date().getHours())
-  const landscapeFile = `images/${name}.png`
+  const landscapeFile = `images/${name}.png?v=5`
+  const hero = document.getElementById("mobile-hero")
+
+  setTimeOfDayTheme(name)
 
   if (!usesMobileBackground()) {
     document.body.style.backgroundImage = `url("${landscapeFile}")`
+    if (hero) hero.style.backgroundImage = "none"
     return
   }
 
-  const mobileFile = `images/${name}-mobile.png?v=4`
+  document.body.style.backgroundImage = "none"
+
+  const mobileFile = `images/${name}-mobile.png?v=5`
   const testImage = new Image()
 
   testImage.onload = () => {
-    document.body.style.backgroundImage = `url("${mobileFile}")`
+    if (hero) hero.style.backgroundImage = `url("${mobileFile}")`
   }
 
   testImage.onerror = () => {
-    document.body.style.backgroundImage = `url("${landscapeFile}")`
+    if (hero) hero.style.backgroundImage = `url("${landscapeFile}")`
   }
 
   testImage.src = mobileFile
