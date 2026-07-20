@@ -1423,3 +1423,19 @@ footer{
     display:none !important;
   }
 }
+
+@media (max-width:900px){
+  body{
+    background-size:100% auto;
+    background-position:top center;
+    background-repeat:no-repeat;
+    background-color:#159fd0;
+  }
+}
+
+@media (max-width:900px){
+  .updated-panel{
+    top:38px;
+    right:22px;
+  }
+}
