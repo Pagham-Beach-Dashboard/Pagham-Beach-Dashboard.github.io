@@ -1,4 +1,3 @@
-
 :root{
   --navy:#073d58;
   --teal:#1a8da0;
@@ -50,6 +49,37 @@ body{
   min-width:165px;
   padding:6px 0;
   text-align:right;
+}
+
+
+.live-badge{
+  display:inline-flex !important;
+  align-items:center;
+  justify-content:center;
+  width:max-content;
+  margin:0 0 7px auto;
+  padding:3px 9px;
+  border:1px solid rgba(255,255,255,.72);
+  border-radius:999px;
+  color:#0b5f86;
+  background:rgba(255,255,255,.58);
+  box-shadow:0 0 10px rgba(26,141,160,.20);
+  font-size:.58rem !important;
+  font-weight:700;
+  letter-spacing:.13em !important;
+  line-height:1;
+  animation:liveFade 2.4s ease-in-out infinite;
+}
+
+@keyframes liveFade{
+  0%,100%{
+    opacity:1;
+    box-shadow:0 0 10px rgba(26,141,160,.22);
+  }
+  50%{
+    opacity:.62;
+    box-shadow:0 0 6px rgba(26,141,160,.12);
+  }
 }
 
 .updated-panel span,
@@ -601,8 +631,6 @@ body{
   bottom:-22px;
 }
 
-50%{transform:translateY(-7px);}
-}
 
 .buoy{
   width:300px;
@@ -957,5 +985,448 @@ footer{
 
   .sunset-art{
     width:195px;
+  }
+}
+
+
+/* Two-page landscape presentation */
+.view{
+  width:100%;
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transform:translateY(9px) scale(.992);
+  transition:opacity .78s cubic-bezier(.22,.61,.36,1),
+             transform .78s cubic-bezier(.22,.61,.36,1),
+             visibility 0s linear .78s;
+}
+
+.view.is-active{
+  opacity:1;
+  visibility:visible;
+  pointer-events:auto;
+  transform:translateY(0) scale(1);
+  transition-delay:0s;
+}
+
+.view-forecast{
+  position:absolute;
+  inset:0;
+  padding:20px 42px 18px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+}
+
+.forecast-panel{
+  width:min(1320px,88vw);
+  margin-top:clamp(170px,19vh,205px);
+  padding:20px 22px 16px;
+  border:1px solid rgba(255,255,255,.86);
+  border-radius:20px;
+  background:var(--paper);
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(9px);
+}
+
+.forecast-heading .card-heading{
+  margin-bottom:14px;
+}
+
+.forecast-heading h2{
+  margin:0;
+  font-size:1.22rem;
+  text-transform:uppercase;
+  letter-spacing:.065em;
+}
+
+.forecast-heading p{
+  margin:2px 0 0;
+  max-width:none;
+  color:var(--muted);
+  font-size:.82rem;
+}
+
+.forecast-days{
+  display:grid;
+  grid-template-columns:repeat(7,minmax(0,1fr));
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+
+.forecast-day{
+  min-width:0;
+  padding:13px 12px 15px;
+  border-right:1px solid var(--line);
+  text-align:center;
+}
+
+.forecast-day:last-child{
+  border-right:0;
+}
+
+.forecast-day.is-today{
+  background:rgba(28,141,160,.055);
+}
+
+.forecast-day h3{
+  margin:0;
+  font-size:1.02rem;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+
+.forecast-date{
+  display:block;
+  margin-top:1px;
+  color:var(--muted);
+  font-size:.68rem;
+  font-weight:600;
+  text-transform:uppercase;
+}
+
+.forecast-rating{
+  display:block;
+  margin:10px auto 12px;
+  padding:6px 8px;
+  border-radius:999px;
+  font-size:.72rem;
+  font-weight:700;
+  line-height:1.05;
+}
+
+.forecast-rating.good{color:#125c37;background:#c9ead7;}
+.forecast-rating.intermediate{color:#775100;background:#ffe6aa;}
+.forecast-rating.advanced{color:#8a3c13;background:#ffd5bc;}
+.forecast-rating.danger{color:#84231c;background:#ffc9c0;}
+
+.forecast-metric{
+  margin-top:9px;
+}
+
+.forecast-metric span,
+.forecast-metric strong,
+.forecast-metric small{
+  display:block;
+}
+
+.forecast-metric strong{
+  font-size:1.08rem;
+  line-height:1.05;
+}
+
+.forecast-metric small{
+  margin-top:2px;
+  color:var(--muted);
+  font-size:.6rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.045em;
+}
+
+.forecast-shore{
+  margin-top:11px;
+  padding-top:9px;
+  border-top:1px solid var(--line);
+  color:var(--teal);
+  font-size:.78rem;
+  font-weight:700;
+}
+
+.forecast-window{
+  min-height:36px;
+  margin-top:9px;
+  color:var(--navy);
+  font-size:.72rem;
+  font-weight:700;
+  line-height:1.2;
+}
+
+.forecast-loading{
+  grid-column:1/-1;
+  margin:0;
+  padding:60px 20px;
+  max-width:none;
+  text-align:center;
+}
+
+.forecast-legend{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:10px 18px;
+  margin-top:13px;
+  color:var(--muted);
+  font-size:.7rem;
+}
+
+.forecast-legend span{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.forecast-legend i{
+  width:18px;
+  height:8px;
+  border-radius:999px;
+}
+
+.legend-good{background:#9ed8b1;}
+.legend-intermediate{background:#f2ca6d;}
+.legend-advanced{background:#f2a16d;}
+.legend-danger{background:#ef8e87;}
+
+.forecast-legend strong{
+  margin-left:auto;
+  color:var(--navy);
+}
+
+.view-switcher{
+  position:fixed;
+  z-index:20;
+  left:50%;
+  bottom:18px;
+  display:flex;
+  gap:8px;
+  padding:7px 10px;
+  border-radius:999px;
+  background:rgba(255,253,247,.78);
+  box-shadow:0 7px 18px rgba(0,42,61,.14);
+  backdrop-filter:blur(8px);
+  transform:translateX(-50%);
+}
+
+.view-dot{
+  width:10px;
+  height:10px;
+  padding:0;
+  border:1px solid rgba(7,61,88,.42);
+  border-radius:50%;
+  background:transparent;
+  cursor:pointer;
+}
+
+.view-dot.is-active{
+  background:var(--teal);
+  border-color:var(--teal);
+}
+
+@media(min-width:681px) and (orientation:landscape){
+  .dashboard{
+    overflow:hidden;
+  }
+}
+
+/* Mobile: current dashboard only */
+@media(max-width:680px), (orientation:portrait) and (max-width:900px){
+  body{
+    background-attachment:scroll;
+    background-position:center top;
+  }
+
+  .dashboard{
+    min-height:100vh;
+    padding:16px 14px 24px;
+    overflow:visible;
+  }
+
+  .updated-panel{
+    position:relative;
+    top:auto;
+    right:auto;
+    align-self:flex-end;
+    margin:0 2px 96px 0;
+  }
+
+  .updated-panel strong{
+    font-size:1.55rem;
+  }
+
+  .view-current{
+    position:relative;
+  }
+
+  .view-current .cards{
+    width:100%;
+    margin:0;
+    display:grid;
+    grid-template-columns:1fr;
+    gap:11px;
+    transform:none;
+  }
+
+  .view-current .card,
+  .view-current .windsurf-card,
+  .view-current .tide-card,
+  .view-current .temperature-card,
+  .view-current .pollution-card,
+  .view-current .sunset-card{
+    grid-column:auto;
+    min-height:0;
+    height:auto;
+    padding:15px 16px;
+  }
+
+  .windsurf-topline{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:11px;
+  }
+
+  .windsurf-summary strong{
+    font-size:2rem;
+  }
+
+  .mini-data{
+    width:100%;
+  }
+
+  .mini-data span{
+    flex:1;
+    min-width:0;
+    padding:0 8px;
+  }
+
+  .windsurf-insights{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .card p{
+    max-width:100%;
+  }
+
+  .marine-safety-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:6px;
+    margin-top:9px;
+    padding-right:70px;
+  }
+
+  .marine-safety-grid div{
+    padding:7px 8px;
+    border-radius:10px;
+    background:rgba(28,141,160,.07);
+  }
+
+  .marine-safety-grid span,
+  .marine-safety-grid strong{
+    display:block;
+  }
+
+  .marine-safety-grid span{
+    color:var(--muted);
+    font-size:.58rem;
+    font-weight:700;
+    text-transform:uppercase;
+  }
+
+  .tide-wave{
+    width:145px;
+    right:-30px;
+    bottom:-12px;
+  }
+
+  .pollution-card .card-content,
+  .sunset-card .card-content{
+    padding-right:112px;
+  }
+
+  .buoy{
+    width:145px;
+    right:-18px;
+    bottom:-15px;
+  }
+
+  .sunset-art{
+    width:150px;
+    right:-18px;
+    bottom:-15px;
+  }
+
+  .view-forecast,
+  .view-switcher{
+    display:none !important;
+  }
+}
+
+@media(max-width:430px){
+  .updated-panel{
+    margin-bottom:78px;
+  }
+
+  .windsurf-insights{
+    grid-template-columns:1fr;
+  }
+
+  .pollution-card .card-content,
+  .sunset-card .card-content{
+    padding-right:92px;
+  }
+}
+
+
+/* Manual tablet forecast controls */
+.forecast-open-button,
+.forecast-back-button{
+  position:fixed;
+  left:50%;
+  bottom:28px;
+  z-index:20;
+  min-width:190px;
+  min-height:44px;
+  padding:7px 20px;
+  border:1px solid rgba(255,255,255,.40);
+  border-radius:16px;
+  color:var(--navy);
+  background:rgba(255,253,247,.40);
+  font-family:inherit;
+  font-size:1rem;
+  font-weight:700;
+  text-align:center;
+  cursor:pointer;
+  transform:translateX(-50%);
+  -webkit-tap-highlight-color:transparent;
+  box-shadow:0 8px 20px rgba(0,42,61,.10);
+  backdrop-filter:blur(2px);
+  transition:transform .18s ease, box-shadow .18s ease, background .18s ease, opacity .2s ease;
+}
+
+.forecast-back-button{
+  opacity:0;
+  pointer-events:none;
+}
+
+.forecast-open-button:active,
+.forecast-back-button:active{
+  transform:translateX(-50%) scale(.97);
+}
+
+.forecast-is-open .forecast-open-button{
+  opacity:0;
+  pointer-events:none;
+}
+
+.forecast-is-open .forecast-back-button{
+  opacity:1;
+  pointer-events:auto;
+}
+
+.view-switcher{
+  display:none !important;
+}
+
+@media(max-width:680px), (orientation:portrait) and (max-width:900px){
+  .forecast-open-button,
+  .forecast-back-button{
+    display:none !important;
+  }
+}
+
+@media (pointer: coarse) and (hover: none){
+  .forecast-open-button,
+  .forecast-back-button{
+    display:none;
   }
 }
