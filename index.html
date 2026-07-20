@@ -15,12 +15,13 @@
 <body>
   <main class="dashboard">
     <div class="updated-panel" aria-live="polite">
-      <span>Updated</span>
+      <span class="live-badge">Live</span>
       <strong id="last-updated">Loading…</strong>
       <small id="today-date"></small>
     </div>
 
-    <section class="cards">
+    <section class="view view-current is-active" id="current-view" aria-label="Current conditions">
+      <div class="cards">
       <article class="card windsurf-card">
         <div class="card-content">
           <div class="card-heading">
@@ -196,7 +197,42 @@
           <p id="daylight-remaining">Calculating daylight</p>
         </div>
       </article>
+      </div>
     </section>
+
+    <section class="view view-forecast" id="forecast-view" aria-label="Seven day windsurf forecast" aria-hidden="true">
+      <article class="forecast-panel">
+        <header class="forecast-heading">
+          <div class="card-heading">
+            <img class="small-icon" src="icons/windsurf.svg" alt="">
+            <div>
+              <h2>7 day windsurf forecast</h2>
+              <p>Today and the next six days</p>
+            </div>
+          </div>
+        </header>
+
+        <div class="forecast-days" id="forecast-days" aria-live="polite">
+          <p class="forecast-loading">Loading seven-day wind forecast…</p>
+        </div>
+
+        <footer class="forecast-legend" aria-label="Windsurf ratings">
+          <span><i class="legend-good"></i>Beginner winds</span>
+          <span><i class="legend-intermediate"></i>Intermediate winds</span>
+          <span><i class="legend-advanced"></i>Advanced winds</span>
+          <span><i class="legend-danger"></i>Offshore or high risk</span>
+          <strong>Beginner range: 6–12 kt</strong>
+        </footer>
+      </article>
+    </section>
+
+    <button type="button" class="forecast-open-button" id="open-forecast" aria-controls="forecast-view">
+      7 Day Forecast
+    </button>
+
+    <button type="button" class="forecast-back-button" id="back-to-dashboard" aria-controls="current-view">
+      Back to dashboard
+    </button>
 
     <footer>All data is advisory only. Check local conditions before entering the water.</footer>
   </main>
