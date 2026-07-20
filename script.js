@@ -12,7 +12,7 @@ function getBackgroundNameForHour(hour) {
 }
 
 function usesMobileBackground() {
-  return window.matchMedia("(max-width: 680px), (orientation: portrait) and (max-width: 900px)").matches
+  return window.matchMedia("(max-width: 900px)").matches
 }
 
 function updateBackground() {
@@ -24,7 +24,7 @@ function updateBackground() {
     return
   }
 
-  const mobileFile = `images/${name}-mobile.png`
+  const mobileFile = `images/${name}-mobile.png?v=4`
   const testImage = new Image()
 
   testImage.onload = () => {
