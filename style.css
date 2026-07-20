@@ -1026,7 +1026,7 @@ footer{
   border-radius:20px;
   background:var(--paper);
   box-shadow:var(--shadow);
-  backdrop-filter:blur(9px);
+  backdrop-filter:blur(px);
 }
 
 .forecast-heading .card-heading{
@@ -1191,7 +1191,7 @@ footer{
   gap:8px;
   padding:7px 10px;
   border-radius:999px;
-  background:rgba(255,253,247,.78);
+  background:rgba(255,253,247,.76);
   box-shadow:0 7px 18px rgba(0,42,61,.14);
   backdrop-filter:blur(8px);
   transform:translateX(-50%);
@@ -1372,7 +1372,7 @@ footer{
 .forecast-back-button{
   position:fixed;
   left:50%;
-  bottom:28px;
+  bottom:8px;
   z-index:20;
   min-width:190px;
   min-height:44px;
@@ -1388,8 +1388,8 @@ footer{
   cursor:pointer;
   transform:translateX(-50%);
   -webkit-tap-highlight-color:transparent;
-  box-shadow:0 8px 20px rgba(0,42,61,.10);
-  backdrop-filter:blur(2px);
+  box-shadow:0 8px 20px rgba(0,42,61,.16);
+  backdrop-filter:blur(1px);
   transition:transform .18s ease, box-shadow .18s ease, background .18s ease, opacity .2s ease;
 }
 
@@ -1421,12 +1421,5 @@ footer{
   .forecast-open-button,
   .forecast-back-button{
     display:none !important;
-  }
-}
-
-@media (pointer: coarse) and (hover: none){
-  .forecast-open-button,
-  .forecast-back-button{
-    display:none;
   }
 }
