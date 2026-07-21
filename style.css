@@ -1440,12 +1440,12 @@ footer{
   html,
   body{
     min-height:100%;
+    background:var(--mobile-page-colour,#79c7d5);
   }
 
   body{
     background-image:none !important;
-    background-attachment:scroll;
-    background-color:var(--mobile-page-colour,#18a5cf);
+    overflow-x:hidden;
   }
 
   body.morning-theme{
@@ -1465,17 +1465,18 @@ footer{
   }
 
   .mobile-hero{
+    display:block;
     position:fixed;
     inset:0;
-    width:100%;
-    height:100svh;
+    width:100vw;
+    height:100dvh;
     z-index:0;
-    overflow:hidden;
-    background-size:cover;
-    background-position:top center;
-    background-repeat:no-repeat;
-    background-color:var(--mobile-page-colour);
     pointer-events:none;
+    overflow:hidden;
+    background-repeat:no-repeat;
+    background-position:center top;
+    background-size:contain;
+    background-color:var(--mobile-page-colour);
     transition:background-image .7s ease,background-color .7s ease;
   }
 
@@ -1486,18 +1487,20 @@ footer{
     background:linear-gradient(
       to bottom,
       rgba(0,0,0,0) 0%,
-      rgba(0,0,0,0) 46%,
-      rgba(0,35,55,.08) 72%,
-      rgba(0,35,55,.18) 100%
+      rgba(0,0,0,0) 55%,
+      rgba(0,35,55,.08) 78%,
+      rgba(0,35,55,.16) 100%
     );
     pointer-events:none;
   }
 
-  .mobile-hero .updated-panel{
+  .mobile-hero .updated-panel,
+  .updated-panel{
     position:fixed;
-    top:18vh;
-    right:16px;
-    z-index:5;
+    top:calc(env(safe-area-inset-top) + 18px);
+    right:18px;
+    z-index:30;
+    margin:0;
     pointer-events:auto;
   }
 
@@ -1507,8 +1510,8 @@ footer{
     width:100%;
     min-height:100vh;
     margin:0;
-    padding:25vh 16px 32px;
-    background:transparent;
+    padding:25dvh 16px 32px;
+    background:transparent !important;
   }
 
   .view-current .cards{
