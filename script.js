@@ -27,26 +27,19 @@ function setTimeOfDayTheme(name) {
 
 function updateBackground() {
   const name = getBackgroundNameForHour(new Date().getHours())
-  const landscapeFile = `images/${name}.png?v=6`
-  const mobileFile = `images/${name}-mobile.png?v=6`
+  const landscapeFile = `images/${name}.png?v=10`
+  const mobileFile = `images/${name}-mobile.png?v=10`
   const mobileHero = document.querySelector(".mobile-hero")
 
   setTimeOfDayTheme(name)
 
-  if (usesMobileBackground() && mobileHero) {
-    const testImage = new Image()
+  if (usesMobileBackground()) {
+    document.body.style.backgroundImage = "none"
 
-    testImage.onload = () => {
+    if (mobileHero) {
       mobileHero.style.backgroundImage = `url("${mobileFile}")`
-      document.body.style.backgroundImage = "none"
     }
 
-    testImage.onerror = () => {
-      mobileHero.style.backgroundImage = `url("${landscapeFile}")`
-      document.body.style.backgroundImage = "none"
-    }
-
-    testImage.src = mobileFile
     return
   }
 
