@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="style.css?v=11">
 </head>
 
 <body>
@@ -25,7 +25,7 @@
 
     <section class="view view-current is-active" id="current-view" aria-label="Current conditions">
       <div class="cards">
-      <article class="card windsurf-card">
+      <article class="card windsurf-card" id="windsurf-card" tabindex="0" role="button" aria-expanded="false" aria-label="Open detailed windsurf conditions">
         <div class="card-content">
           <div class="card-heading">
             <img class="small-icon" src="icons/windsurf.svg" alt="">
@@ -84,6 +84,48 @@
               </div>
             </div>
           </div>
+
+          <section class="windsurf-expanded-detail" id="windsurf-expanded-detail" aria-hidden="true">
+            <header class="windsurf-expanded-header">
+              <div>
+                <span class="expanded-kicker">Pagham Beach</span>
+                <h3>Today’s Conditions</h3>
+              </div>
+              <button type="button" class="windsurf-close-button" id="windsurf-close-button" aria-label="Close detailed windsurf conditions">Close</button>
+            </header>
+
+            <div class="windsurf-window-summary" id="windsurf-window-summary">
+              Loading today’s windsurf windows…
+            </div>
+
+            <div class="windsurf-day-graph" aria-label="Wind and gust forecast through the day">
+              <div class="windsurf-graph-legend" aria-hidden="true">
+                <span><i class="wind-line-key"></i>Wind</span>
+                <span><i class="gust-line-key"></i>Gusts</span>
+              </div>
+              <svg id="windsurf-day-chart" viewBox="0 0 980 320" role="img" aria-label="Wind, gust and direction forecast graph">
+                <defs>
+                  <linearGradient id="wind-area-gradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#138bb5" stop-opacity=".42"></stop>
+                    <stop offset="100%" stop-color="#138bb5" stop-opacity=".04"></stop>
+                  </linearGradient>
+                  <linearGradient id="gust-area-gradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#dc7b16" stop-opacity=".34"></stop>
+                    <stop offset="100%" stop-color="#dc7b16" stop-opacity=".03"></stop>
+                  </linearGradient>
+                </defs>
+                <g id="windsurf-chart-bands"></g>
+                <g class="windsurf-chart-grid" id="windsurf-chart-grid"></g>
+                <polygon id="windsurf-gust-area" class="windsurf-chart-area gust" points=""></polygon>
+                <polygon id="windsurf-wind-area" class="windsurf-chart-area wind" points=""></polygon>
+                <polyline id="windsurf-gust-line" class="windsurf-chart-line gust" points=""></polyline>
+                <polyline id="windsurf-wind-line" class="windsurf-chart-line wind" points=""></polyline>
+                <g id="windsurf-chart-labels"></g>
+                <g id="windsurf-axis-direction-markers" aria-label="Time and wind direction through the day"></g>
+              </svg>
+            </div>
+
+          </section>
         </div>
       </article>
 
@@ -240,6 +282,6 @@
     <footer>All data is advisory only. Check local conditions before entering the water.</footer>
   </main>
 
-  <script src="script.js?v=10"></script>
+  <script src="script.js?v=11"></script>
 </body>
 </html>
