@@ -185,6 +185,7 @@ function updateHourlyWeather(hourly) {
     )
 
   updateBestWindsurfWindow(nextForecast)
+  updateExpandedWindsurf(hourly)
 
   const today = now.toDateString()
   const remainingTodayRain = times
@@ -1301,6 +1302,282 @@ function initialiseSwipeNavigation() {
   }, { passive:true })
 }
 
+
+const WINDSURF_EXPANDED_DELAY = 20 * 1000
+let windsurfExpandedTimer = null
+let windsurfExpanded = false
+
+function updateExpandedWindsurf(hourly) {
+  const summary = document.getElementById("windsurf-window-summary")
+  const windLine = document.getElementById("windsurf-wind-line")
+  const gustLine = document.getElementById("windsurf-gust-line")
+  const windArea = document.getElementById("windsurf-wind-area")
+  const gustArea = document.getElementById("windsurf-gust-area")
+  const bands = document.getElementById("windsurf-chart-bands")
+  const grid = document.getElementById("windsurf-chart-grid")
+  const labels = document.getElementById("windsurf-chart-labels")
+  const axisDirectionMarkers = document.getElementById("windsurf-axis-direction-markers")
+  if (!summary || !windLine || !gustLine || !windArea || !gustArea || !bands || !grid || !labels || !axisDirectionMarkers) return
+
+  const times = hourly?.time || []
+  const winds = hourly?.wind_speed_10m || []
+  const gusts = hourly?.wind_gusts_10m || []
+  const directions = hourly?.wind_direction_10m || []
+  const now = new Date()
+  const today = now.toDateString()
+
+  const points = times.map((time, index) => ({
+    time: new Date(time),
+    wind: Number(winds[index]),
+    gusts: Number(gusts[index]),
+    direction: Number(directions[index])
+  })).filter(item =>
+    Number.isFinite(item.time.getTime()) &&
+    item.time.toDateString() === today &&
+    item.time.getHours() >= 8 &&
+    item.time.getHours() <= 20 &&
+    Number.isFinite(item.wind) &&
+    Number.isFinite(item.gusts)
+  )
+
+  if (!points.length) {
+    summary.textContent = "Today’s detailed wind forecast is unavailable."
+    windLine.setAttribute("points", "")
+    gustLine.setAttribute("points", "")
+    windArea.setAttribute("points", "")
+    gustArea.setAttribute("points", "")
+    bands.innerHTML = ""
+    grid.innerHTML = ""
+    labels.innerHTML = ""
+    axisDirectionMarkers.innerHTML = ""
+    return
+  }
+
+  const assessed = points.map(point => ({
+    ...point,
+    assessment: assessWindsurfConditions(point.wind, point.gusts, point.direction)
+  }))
+
+  const windows = buildWindsurfWindows(assessed)
+  summary.innerHTML = windows.length
+    ? windows.map(window => `<div class="window-chip ${window.className}"><strong>${window.label}</strong><span>${window.time}</span><small>${window.detail}</small></div>`).join("")
+    : '<div class="window-chip warning"><strong>No clear window</strong><span>Today</span><small>Conditions change too frequently for a sustained session.</small></div>'
+
+  drawExpandedWindsurfGraph(assessed, windows)
+}
+
+function drawExpandedWindsurfGraph(points, windows) {
+  const windLine = document.getElementById("windsurf-wind-line")
+  const gustLine = document.getElementById("windsurf-gust-line")
+  const windArea = document.getElementById("windsurf-wind-area")
+  const gustArea = document.getElementById("windsurf-gust-area")
+  const bands = document.getElementById("windsurf-chart-bands")
+  const grid = document.getElementById("windsurf-chart-grid")
+  const labels = document.getElementById("windsurf-chart-labels")
+  const axisMarkers = document.getElementById("windsurf-axis-direction-markers")
+  if (!windLine || !gustLine || !windArea || !gustArea || !bands || !grid || !labels || !axisMarkers || points.length < 2) return
+
+  const width = 980
+  const height = 320
+  const left = 82
+  const right = 82
+  const top = 18
+  const plotBottom = 202
+  const plotHeight = plotBottom - top
+  const plotWidth = width - left - right
+  const maximum = Math.max(18, ...points.map(item => item.gusts))
+  const startHour = 8
+  const endHour = 20
+  const minutesFromStart = date =>
+    (date.getHours() - startHour) * 60 + date.getMinutes()
+  const xForTime = date =>
+    left + (minutesFromStart(date) / ((endHour - startHour) * 60)) * plotWidth
+  const xFor = index => xForTime(points[index].time)
+  const yFor = value => top + plotHeight - (Math.max(0, value) / maximum) * plotHeight
+
+  const makePoints = key => points.map((item, index) => `${xFor(index).toFixed(1)},${yFor(item[key]).toFixed(1)}`).join(" ")
+  const makeAreaPoints = key => {
+    const curve = makePoints(key)
+    return `${left},${plotBottom} ${curve} ${width - right},${plotBottom}`
+  }
+
+  windArea.setAttribute("points", makeAreaPoints("wind"))
+  gustArea.setAttribute("points", makeAreaPoints("gusts"))
+  windLine.setAttribute("points", makePoints("wind"))
+  gustLine.setAttribute("points", makePoints("gusts"))
+
+  const gridValues = [0, maximum / 2, maximum]
+  grid.innerHTML = gridValues.map(value => {
+    const y = yFor(value)
+    return `<line x1="${left}" y1="${y}" x2="${width-right}" y2="${y}"></line><text x="8" y="${y+5}">${Math.round(value)} kt</text>`
+  }).join("")
+
+  labels.innerHTML = ""
+
+  const markerHours = [8, 10, 12, 14, 16, 18, 20]
+  const markerWidth = 108
+  const markerHeight = 92
+  const markerY = 216
+
+  axisMarkers.innerHTML = markerHours.map(hour => {
+    const targetMinutes = hour * 60
+    const point = points
+      .slice()
+      .sort((a, b) => {
+        const aMinutes = a.time.getHours() * 60 + a.time.getMinutes()
+        const bMinutes = b.time.getHours() * 60 + b.time.getMinutes()
+        return Math.abs(aMinutes - targetMinutes) - Math.abs(bMinutes - targetMinutes)
+      })[0]
+
+    if (!point) return ""
+
+    const guide = getPaghamShoreWind(point.direction)
+    const compass = degreesToCompass(point.direction)
+    const arrowRotation = normaliseDegrees(point.direction + 90)
+    const xCenter = left + ((hour - startHour) / (endHour - startHour)) * plotWidth
+    const x = xCenter - markerWidth / 2
+
+    return `<foreignObject x="${x.toFixed(1)}" y="${markerY}" width="${markerWidth}" height="${markerHeight}">
+      <div xmlns="http://www.w3.org/1999/xhtml" class="axis-direction-marker ${guide.status}">
+        <time>${String(hour).padStart(2, "0")}:00</time>
+        <strong>${guide.label} · ${compass}</strong>
+        <div class="shore-compass axis-direction-compass" aria-hidden="true">
+          <em class="north">N</em>
+          <em class="east">E</em>
+          <em class="south">S</em>
+          <em class="west">W</em>
+          <i style="transform:translate(0,-50%) rotate(${arrowRotation}deg)"></i>
+        </div>
+      </div>
+    </foreignObject>`
+  }).join("")
+
+  const groups = []
+  let groupStart = 0
+  for (let index = 1; index <= points.length; index += 1) {
+    const previous = points[index - 1]
+    const current = points[index]
+    const previousKey = `${previous.assessment.level}|${previous.assessment.shoreWind.category}`
+    const currentKey = current ? `${current.assessment.level}|${current.assessment.shoreWind.category}` : ""
+    if (!current || currentKey !== previousKey) {
+      groups.push({ start: groupStart, end: index - 1, status: previous.assessment.status })
+      groupStart = index
+    }
+  }
+
+  bands.innerHTML = groups.map(group => {
+    const x1 = group.start === 0 ? left : (xFor(group.start - 1) + xFor(group.start)) / 2
+    const x2 = group.end === points.length - 1 ? width - right : (xFor(group.end) + xFor(group.end + 1)) / 2
+    return `<rect class="condition-band ${group.status}" x="${x1}" y="${top}" width="${Math.max(1, x2-x1)}" height="${plotHeight}" rx="8"></rect>`
+  }).join("")
+}
+
+function buildWindsurfWindows(points) {
+  const windows = []
+  let active = []
+  let activeKey = ""
+
+  function flush() {
+    if (!active.length) return
+    const first = active[0]
+    const last = active[active.length - 1]
+    const end = new Date(last.time.getTime() + 60 * 60 * 1000)
+    const assessment = first.assessment
+    const winds = active.map(item => item.wind)
+    const gusts = active.map(item => item.gusts)
+
+    windows.push({
+      label: assessment.level,
+      className: assessment.status,
+      time: `${formatHour(first.time)}–${formatHour(end)}`,
+      detail: `${Math.round(Math.min(...winds))}–${Math.round(Math.max(...winds))} kt, gusts to ${Math.round(Math.max(...gusts))} kt, ${assessment.shoreWind.label.toLowerCase()}`
+    })
+    active = []
+  }
+
+  for (const item of points) {
+    const key = `${item.assessment.level}|${item.assessment.shoreWind.category}`
+    if (active.length && key !== activeKey) flush()
+    activeKey = key
+    active.push(item)
+  }
+  flush()
+
+  return windows.filter(window => window.time)
+}
+
+function runWindsurfTransition(changeView) {
+  if (typeof document.startViewTransition === "function") {
+    document.startViewTransition(changeView)
+  } else {
+    changeView()
+  }
+}
+
+function openWindsurfExpanded() {
+  const card = document.getElementById("windsurf-card")
+  const detail = document.getElementById("windsurf-expanded-detail")
+  if (!card || !detail || windsurfExpanded) return
+
+  runWindsurfTransition(() => {
+    windsurfExpanded = true
+    document.body.classList.add("windsurf-is-expanded")
+    card.setAttribute("aria-expanded", "true")
+    detail.setAttribute("aria-hidden", "false")
+  })
+
+  window.setTimeout(resetWindsurfExpandedTimer, 1050)
+}
+
+function closeWindsurfExpanded() {
+  const card = document.getElementById("windsurf-card")
+  const detail = document.getElementById("windsurf-expanded-detail")
+  if (!card || !detail || !windsurfExpanded) return
+
+  window.clearTimeout(windsurfExpandedTimer)
+  runWindsurfTransition(() => {
+    windsurfExpanded = false
+    document.body.classList.remove("windsurf-is-expanded")
+    card.setAttribute("aria-expanded", "false")
+    detail.setAttribute("aria-hidden", "true")
+  })
+}
+
+function resetWindsurfExpandedTimer() {
+  if (!windsurfExpanded) return
+  window.clearTimeout(windsurfExpandedTimer)
+  windsurfExpandedTimer = window.setTimeout(closeWindsurfExpanded, WINDSURF_EXPANDED_DELAY)
+}
+
+function initialiseWindsurfExpansion() {
+  const card = document.getElementById("windsurf-card")
+  const closeButton = document.getElementById("windsurf-close-button")
+  const detail = document.getElementById("windsurf-expanded-detail")
+  if (!card || !detail) return
+
+  card.addEventListener("click", event => {
+    if (event.target.closest("button")) return
+    windsurfExpanded ? closeWindsurfExpanded() : openWindsurfExpanded()
+  })
+
+  card.addEventListener("keydown", event => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault()
+      windsurfExpanded ? closeWindsurfExpanded() : openWindsurfExpanded()
+    }
+    if (event.key === "Escape") closeWindsurfExpanded()
+  })
+
+  closeButton?.addEventListener("click", event => {
+    event.stopPropagation()
+    closeWindsurfExpanded()
+  })
+
+  ;["touchstart", "pointerdown", "scroll", "wheel"].forEach(eventName => {
+    detail.addEventListener(eventName, resetWindsurfExpandedTimer, { passive:true })
+  })
+}
+
 async function refreshDashboard() {
   const results = await Promise.allSettled([
     loadWeather(),
@@ -1342,6 +1619,7 @@ async function refreshDashboard() {
 
 updateBackground()
 initialiseViewSwitcher()
+initialiseWindsurfExpansion()
 refreshDashboard()
 
 setInterval(refreshDashboard, 15 * 60 * 1000)
